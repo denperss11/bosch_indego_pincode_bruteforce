@@ -1,50 +1,66 @@
+import sys
+
 from PyV4L2Camera.camera import Camera
 import numpy as np
 import time
 import csv
+import RPi.GPIO as GPIO
+import readchar
+from enum import IntEnum
 
 from enum import Enum
-class Button(Enum):
-    NextDigit = 0
-    PrevDigit = 1
-    Increase = 3
-    Decrease = 4
-    Fertig = 5
+class Button(IntEnum):
+    NextDigit = 3
+    Increase = 4
+    Fertig = 14
 
+PowerEn = 15
 try:
     from PIL import Image
 except ImportError:
     import Image
 import pytesseract
 
-pin = 0
-videodev = '/dev/video2'
+videodev = '/dev/video0'
 ROI = (605, 150, 605+289, 150+80)
 
 pinlist = []
+power = False
+
+def gpio_init() :
+    GPIO.setmode(GPIO.BCM)
+    GPIO.setup(3, GPIO.OUT)
+    GPIO.setup(4, GPIO.OUT)
+    GPIO.setup(14, GPIO.OUT)
+    GPIO.setup(PowerEn, GPIO.OUT)
+
 
 def set_power_state(power_on):
+    global power
+    power = power_on
     if (power_on == True):
         print("Power ON")
+        GPIO.output(PowerEn, GPIO.HIGH)
     else:
         print("Power OFF")
+        GPIO.output(PowerEn, GPIO.LOW)
 
 def press_button(button):
     print("Press button: ", button)
+    GPIO.output(int(button), GPIO.HIGH)
+    time.sleep(0.2)
+    GPIO.output(int(button), GPIO.LOW)
 
 def take_image_and_ocr():
-    camera = Camera(videodev)
-    camera.width = 1280
-    camera.height = 720
+    camera = Camera(videodev, 1280, 720)
     frame = camera.get_frame()
     camera.close()
     image = Image.frombytes('RGB', (camera.width, camera.height), frame, 'raw', 'RGB')
     image = image.crop(ROI)
-    image.save("/tmp/out.png")
+    image.save("out.png")
     ret = pytesseract.image_to_string(image, 'deu')
     print(ret)
     return ret
-
 
 def enter_number(num):
     print("Entering pin: ", num)
@@ -63,28 +79,80 @@ def enter_number(num):
         time.sleep(0.01)
     press_button(Button.Fertig)
 
-
-if __name__ == '__main__':
+def dictionary_init(startPIN) :
+    global pinlist
     with open('four-digit-pin-codes-sorted-by-frequency-withcount.csv', newline='') as csvfile:
         pins_w_probability = csv.reader(csvfile, delimiter=',')
-        for row in pins_w_probability:
-            pinlist.append(int(row[0]))
 
-    while pin < len(pinlist):
+        firstPinFound = (len(startPIN) == 0)
+        for row in pins_w_probability:
+            if (firstPinFound) :
+                pinlist.append(int(row[0]))
+            else :
+                if (int(row[0]) == int(startPIN)):
+                    firstPinFound = True
+                    pinlist.append(int(row[0]))
+        print("Loaded %d PINS" % len(pinlist))
+
+def do_bruteforce() :
+    pin_index = 0
+    while pin_index < len(pinlist):
         set_power_state(True)
-        #time.sleep(5)
+        #time.sleep(5) # boot time at the beginning
         press_button(Button.Fertig) # Fertig
         pinfound = False
         for retry in range(3):
-            enter_number(pinlist[pin])
+            enter_number(pinlist[pin_index])
             ocr = take_image_and_ocr()
             if not 'Fehler' in ocr and not 'Tasten' in ocr:
                 pinfound = True
                 break
-            pin = pin + 1
+            pin_index = pin_index + 1
             press_button(Button.Fertig)
             time.sleep(2)
         if pinfound:
-            print("Pin found? ", pin)
+            print("Pin found? ", pin_index)
             break
         set_power_state(False)
+
+def button_test():
+    while True:
+        c = readchar.readchar()
+        if c == 'p':
+            set_power_state(not power)
+        elif c == 'f':
+            press_button(Button.Fertig)
+        elif c == 'q':
+            break
+        elif c == '+':
+            press_button(Button.Increase)
+        elif c == 'n':
+            press_button(Button.NextDigit)
+        time.sleep(0.05)
+
+if __name__ == '__main__':
+    if (len(sys.argv) == 1 or sys.argv[1] == "bruteforce"):
+        gpio_init()
+        startPin = ''
+        if (len(sys.argv) == 3):
+            startPin = sys.argv[2]
+        dictionary_init(startPin)
+        do_bruteforce()
+    else:
+        if (sys.argv[1] == 'button_test'):
+            gpio_init()
+            button_test()
+        elif (sys.argv[1] == 'take_image'):
+            take_image_and_ocr()
+        else:
+            print("Usage:")
+            print(" No arguments: start brute force")
+            print(" bruteforce [start_pin]: start brute force from the pin passed in the 2nd arg")
+            print(" button_test: test the GPIO interface")
+            print("              Supported keys:")
+            print("              - q: exit")
+            print("              - f: 'Fertig'")
+            print("              - +: increase digit")
+            print("              - n: next digit")
+            print("              - p: toggle power")
+            print(" take_image:  Take a test image and write it to test.png")

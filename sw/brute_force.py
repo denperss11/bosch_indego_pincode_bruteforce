@@ -68,16 +68,22 @@ def press_button(button):
     time.sleep(0.2)
     GPIO.output(int(button), GPIO.LOW)
 
-def take_image_and_ocr(savename):
+def take_image_and_ocr(savename, do_ocr):
     camera = Camera(videodev, 1280, 720)
     frame = camera.get_frame()
     camera.close()
     image = Image.frombytes('RGB', (camera.width, camera.height), frame, 'raw', 'RGB')
     image = image.crop(ROI)
     image.save(str(savename) + ".png")
-    ret = pytesseract.image_to_string(image, 'deu')
-    print(ret)
-    return ret
+    del frame
+    del camera
+    if (do_ocr):
+        ret = pytesseract.image_to_string(image, 'deu')
+        del image
+        print(ret)
+        return ret
+    del image
+    return ''
 
 def enter_number(num):
     print("Entering pin: ", num)
@@ -120,11 +126,11 @@ def do_bruteforce() :
         time.sleep(32) # boot time at the beginning
         press_button(Button.Fertig) # Fertig
         time.sleep(0.5)
-        pinfound = False
+        pin_found = False
         for retry in range(3):
             enter_number(pinlist[pin_index])
             time.sleep(1)
-            ocr = take_image_and_ocr(pinlist[pin_index]).lower()
+            ocr = take_image_and_ocr(pinlist[pin_index], True).lower()
             if not 'fehler' in ocr \
                     and not 'tasten' in ocr \
                     and not 'sind' in ocr \
@@ -132,13 +138,13 @@ def do_bruteforce() :
                     and not 'bitte' in ocr \
                     and not 'kontaktieren' in ocr \
                     and not 'service' in ocr:
-                pinfound = True
+                pin_found = True
                 break
             pin_index = pin_index + 1
             press_button(Button.Fertig)
             time.sleep(1)
-        if pinfound:
-            print("Pin found? ", pin_index)
+        if pin_found:
+            print("Pin found?", pin_index, )
             break
         set_power_state(False)
         time.sleep(3)
@@ -177,7 +183,9 @@ if __name__ == '__main__':
             gpio_init()
             button_test()
         elif (sys.argv[1] == 'take_image'):
-            take_image_and_ocr("test")
+            take_image_and_ocr("test", False)
+        elif (sys.argv[1] == 'take_image_ocr'):
+            take_image_and_ocr("test", True)
         else:
             print("Usage:")
             print(" No arguments: start brute force")
@@ -191,3 +199,4 @@ if __name__ == '__main__':
             print("              - p: toggle power")
             print("              - d: toggle dock power")
             print(" take_image:  Take a test image and write it to test.png")
+            print(" take_image_ocr:  Take a test image and write it to test.png and OCR it")

@@ -4,9 +4,10 @@ from PyV4L2Camera.camera import Camera
 import numpy as np
 import time
 import csv
-import RPi.GPIO as GPIO
 import readchar
 from enum import IntEnum
+import RPi.GPIO as GPIO
+
 
 from enum import Enum
 class Button(IntEnum):
@@ -25,12 +26,12 @@ import pytesseract
 
 videodev = '/dev/video0'
 ROI = (0, 0, 1280, 720)
-ROI = (246, 237, 890, 394)
-
+ROI = (283, 213, 914, 338)
 
 pinlist = []
 power = False
 dockPower = False
+camera = None
 
 def gpio_init() :
     GPIO.setmode(GPIO.BCM)
@@ -69,14 +70,12 @@ def press_button(button):
     GPIO.output(int(button), GPIO.LOW)
 
 def take_image_and_ocr(savename, do_ocr):
-    camera = Camera(videodev, 1280, 720)
+    global camera
     frame = camera.get_frame()
-    camera.close()
     image = Image.frombytes('RGB', (camera.width, camera.height), frame, 'raw', 'RGB')
+    del frame
     image = image.crop(ROI)
     image.save(str(savename) + ".png")
-    del frame
-    del camera
     if (do_ocr):
         ret = pytesseract.image_to_string(image, 'deu')
         del image
@@ -116,6 +115,14 @@ def dictionary_init(startPIN) :
                     firstPinFound = True
                     pinlist.append(int(row[0]))
         print("Loaded %d PINS" % len(pinlist))
+
+def camera_init() :
+    global camera
+    camera = Camera(videodev, 1280, 720)
+
+def camera_close() :
+    global camera
+    camera.close()
 
 def do_bruteforce() :
     pin_index = 0
@@ -176,16 +183,22 @@ if __name__ == '__main__':
         startPin = ''
         if (len(sys.argv) == 3):
             startPin = sys.argv[2]
+        camera_init()
         dictionary_init(startPin)
         do_bruteforce()
+        camera_close()
     else:
         if (sys.argv[1] == 'button_test'):
             gpio_init()
             button_test()
         elif (sys.argv[1] == 'take_image'):
+            camera_init()
             take_image_and_ocr("test", False)
+            camera_close()
         elif (sys.argv[1] == 'take_image_ocr'):
+            camera_init()
             take_image_and_ocr("test", True)
+            camera_close()
         else:
             print("Usage:")
             print(" No arguments: start brute force")

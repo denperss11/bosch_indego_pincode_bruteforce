@@ -28,7 +28,7 @@ import pytesseract
 
 videodev = '/dev/video0'
 #ROI = (0, 0, 1280, 720)
-ROI = (300, 180+54, 1033, 360)
+ROI = (60, 130, 1100, 360)
 
 pinlist = []
 power = False
@@ -152,15 +152,16 @@ def do_bruteforce() :
             enter_number(pinlist[pin_index])
             time.sleep(2)
             ocr = take_image_and_ocr(pinlist[pin_index], True).lower()
-            if not 'hler' in ocr \
+            '''if not 'hler' in ocr \
                     and not 'ast' in ocr \
                     and not 'ind' in ocr \
                     and not 'esp' in ocr \
-                    and not 'itte' in ocr \
+                    and not 'tte' in ocr \
                     and not 'onta' in ocr \
                     and not 'feh' in ocr \
                     and not 'erv' in ocr \
-                    and not 'serv' in ocr:
+                    and not 'serv' in ocr:'''
+            if len(ocr) < 10 :
                 pin_found = True
                 try:
                     input("Press enter to continue")

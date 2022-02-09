@@ -28,7 +28,7 @@ import pytesseract
 
 videodev = '/dev/video0'
 #ROI = (0, 0, 1280, 720)
-ROI = (75, 180, 1280, 360)
+ROI = (300, 180+54, 1033, 360)
 
 pinlist = []
 power = False
@@ -144,21 +144,22 @@ def do_bruteforce() :
         set_dock_power_state(True)
         time.sleep(4) # delay between the dock and power
         set_power_state(True)
-        time.sleep(18) # boot time at the beginning
+        time.sleep(22) # boot time at the beginning
         press_button(Button.Fertig) # Fertig
-        time.sleep(0.5)
+        time.sleep(1)
         pin_found = False
         for retry in range(3):
             enter_number(pinlist[pin_index])
             time.sleep(2)
             ocr = take_image_and_ocr(pinlist[pin_index], True).lower()
-            if not 'fehler' in ocr \
-                    and not 'tast' in ocr \
-                    and not 'sind' in ocr \
-                    and not 'gesp' in ocr \
-                    and not 'bitte' in ocr \
-                    and not 'kontak' in ocr \
-                    and not 'fehl' in ocr \
+            if not 'hler' in ocr \
+                    and not 'ast' in ocr \
+                    and not 'ind' in ocr \
+                    and not 'esp' in ocr \
+                    and not 'itte' in ocr \
+                    and not 'onta' in ocr \
+                    and not 'feh' in ocr \
+                    and not 'erv' in ocr \
                     and not 'serv' in ocr:
                 pin_found = True
                 try:

@@ -27,8 +27,8 @@ except ImportError:
 import pytesseract
 
 videodev = '/dev/video0'
-#ROI = (0, 0, 1280, 720)
-ROI = (60, 130, 1100, 360)
+ROI = (0, 0, 1280, 720)
+ROI = (230, 170, 900, 366)
 
 pinlist = []
 power = False
@@ -142,11 +142,11 @@ def do_bruteforce() :
     pin_index = 0
     while pin_index < len(pinlist):
         set_dock_power_state(True)
-        time.sleep(4) # delay between the dock and power
+        time.sleep(5) # delay between the dock and power
         set_power_state(True)
-        time.sleep(22) # boot time at the beginning
+        time.sleep(30) # boot time at the beginning
         press_button(Button.Fertig) # Fertig
-        time.sleep(1)
+        time.sleep(2)
         pin_found = False
         for retry in range(3):
             enter_number(pinlist[pin_index])

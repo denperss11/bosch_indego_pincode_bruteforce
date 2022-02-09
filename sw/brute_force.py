@@ -28,7 +28,7 @@ import pytesseract
 
 videodev = '/dev/video0'
 ROI = (0, 0, 1280, 720)
-ROI = (230, 170, 900, 366)
+ROI = (280+53, 331, 1000-40, 470)
 
 pinlist = []
 power = False

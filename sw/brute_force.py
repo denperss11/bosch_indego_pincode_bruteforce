@@ -10,6 +10,7 @@ from enum import IntEnum
 import RPi.GPIO as GPIO
 import os
 import glob
+import free
 
 from enum import Enum
 class Button(IntEnum):
@@ -80,6 +81,7 @@ def take_image_and_ocr(savename, do_ocr, ROI_):
     frame = camera.get_frame()
     image = Image.frombytes('RGB', (camera.width, camera.height), frame, 'raw', 'RGB')
     del frame
+    free_(frame)
     camera.close()
     image = image.crop(ROI_)
     image.save(str(savename) + ".png")

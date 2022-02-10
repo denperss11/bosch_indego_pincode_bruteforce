@@ -85,10 +85,10 @@ def take_image_and_ocr(savename, do_ocr, ROI_):
     image.save(str(savename) + ".png")
     if (do_ocr):
         tessconf = r'--dpi 300'
-        ret = pytesseract.image_to_string(image, lang='deu', config=tessconf)
+        ret = pytesseract.image_to_string(image, lang='deu', config=tessconf).lower().translate(str.maketrans('', '', ' \n\t\r'))
         del image
         print(ret)
-        return ret.lower().translate(str.maketrans('', '', ' \n\t\r'))
+        return ret
     del image
     return ''
 
@@ -101,7 +101,7 @@ def enter_number(num):
     digits.append((num % 10))
 
     for digit in digits:
-        print("Entering digit: ", digit)
+        #print("Entering digit: ", digit)
         for step in range(digit):
             press_button(Button.Increase)
             time.sleep(0.1)

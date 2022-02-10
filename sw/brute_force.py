@@ -69,7 +69,7 @@ def set_dock_power_state(power_on):
         GPIO.output(DockPowerEn, GPIO.LOW)
 
 def press_button(button):
-    print("Press button: ", button)
+    #print("Press button: ", button)
     GPIO.output(int(button), GPIO.HIGH)
     time.sleep(0.2)
     GPIO.output(int(button), GPIO.LOW)
@@ -157,7 +157,7 @@ def do_bruteforce() :
             enter_number(pinlist[pin_index])
             time.sleep(2)
             ocr = take_image_and_ocr(pinlist[pin_index], True, ROI_b if retry == 2 else ROI)
-            '''if not 'hler' in ocr \
+            if not 'hler' in ocr \
                     and not 'ast' in ocr \
                     and not 'ind' in ocr \
                     and not 'esp' in ocr \
@@ -165,8 +165,7 @@ def do_bruteforce() :
                     and not 'onta' in ocr \
                     and not 'feh' in ocr \
                     and not 'erv' in ocr \
-                    and not 'serv' in ocr:'''
-            if len(ocr) < 10 :
+                    and not 'serv' in ocr:
                 pin_found = True
                 try:
                     input("Press enter to continue")

@@ -84,10 +84,11 @@ def take_image_and_ocr(savename, do_ocr, ROI_):
     image = image.crop(ROI_)
     image.save(str(savename) + ".png")
     if (do_ocr):
-        ret = pytesseract.image_to_string(image, 'deu')
+        tessconf = r'--dpi 300'
+        ret = pytesseract.image_to_string(image, lang='deu', config=tessconf)
         del image
         print(ret)
-        return ret
+        return ret.lower().translate(str.maketrans('', '', ' \n\t\r'))
     del image
     return ''
 
@@ -155,7 +156,7 @@ def do_bruteforce() :
         for retry in range(3):
             enter_number(pinlist[pin_index])
             time.sleep(2)
-            ocr = take_image_and_ocr(pinlist[pin_index], True, ROI_b if retry == 2 else ROI).lower().translate(str.maketrans('', '', ' \n\t\r'))
+            ocr = take_image_and_ocr(pinlist[pin_index], True, ROI_b if retry == 2 else ROI)
             '''if not 'hler' in ocr \
                     and not 'ast' in ocr \
                     and not 'ind' in ocr \

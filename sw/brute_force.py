@@ -28,7 +28,9 @@ import pytesseract
 
 videodev = '/dev/video0'
 ROI = (0, 0, 1280, 720)
-ROI = (280+53, 331, 1000-40, 470)
+ROI = (396, 321, 970, 400)
+ROI_b = (374, 311, 980, 405)
+
 
 pinlist = []
 power = False
@@ -72,14 +74,14 @@ def press_button(button):
     time.sleep(0.2)
     GPIO.output(int(button), GPIO.LOW)
 
-def take_image_and_ocr(savename, do_ocr):
+def take_image_and_ocr(savename, do_ocr, ROI_):
     camera = Camera(videodev, 1280, 720)
     #global camera
     frame = camera.get_frame()
     image = Image.frombytes('RGB', (camera.width, camera.height), frame, 'raw', 'RGB')
     del frame
     camera.close()
-    image = image.crop(ROI)
+    image = image.crop(ROI_)
     image.save(str(savename) + ".png")
     if (do_ocr):
         ret = pytesseract.image_to_string(image, 'deu')
@@ -132,6 +134,8 @@ def dictionary_init(startPIN) :
         print("Loaded %d PINS" % len(pinlist))
 
 def camera_init():
+    os.system("v4l2-ctl -d 0 -c exposure_auto=0")
+    os.system("v4l2-ctl -d 0 -c exposure_auto=1")
     os.system("v4l2-ctl -d 0 -c focus_auto=0")
     os.system("v4l2-ctl -d 0 -c focus_absolute=18")
 
@@ -151,7 +155,7 @@ def do_bruteforce() :
         for retry in range(3):
             enter_number(pinlist[pin_index])
             time.sleep(2)
-            ocr = take_image_and_ocr(pinlist[pin_index], True).lower()
+            ocr = take_image_and_ocr(pinlist[pin_index], True, ROI_b if retry == 2 else ROI).lower().translate(str.maketrans('', '', ' \n\t\r'))
             '''if not 'hler' in ocr \
                     and not 'ast' in ocr \
                     and not 'ind' in ocr \
@@ -212,10 +216,16 @@ if __name__ == '__main__':
             button_test()
         elif (sys.argv[1] == 'take_image'):
             camera_init()
-            take_image_and_ocr("test", False)
+            take_image_and_ocr("test", False, ROI)
+        elif (sys.argv[1] == 'take_image_b'):
+            camera_init()
+            take_image_and_ocr("test", False, ROI_b)
         elif (sys.argv[1] == 'take_image_ocr'):
             camera_init()
-            take_image_and_ocr("test", True)
+            take_image_and_ocr("test", True, ROI)
+        elif (sys.argv[1] == 'take_image_ocr_b'):
+            camera_init()
+            take_image_and_ocr("test", True, ROI_b)
         else:
             print("Usage:")
             print(" No arguments: start brute force")

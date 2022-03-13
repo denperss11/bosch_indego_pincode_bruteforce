@@ -11,14 +11,31 @@ import RPi.GPIO as GPIO
 import os
 import glob
 
+class Target(IntEnum):
+    Bosch_Indego = 0,
+    Husqvarna = 1
+
+target = Target.Husqvarna # TODO add cmd line arg
+
 from enum import Enum
 class Button(IntEnum):
     NextDigit = 3
     Increase = 4
     Fertig = 14
+    Btn_0 = Increase
+    Btn_1 = NextDigit
+    Btn_2 = 7
+    Btn_3 = 8
+    Btn_4 = 9
+    Btn_5 = 10
+    Btn_6 = 11
+    Btn_7 = 12
+    Btn_8 = 13
+    Btn_9 = 16
 
-PowerEn = 18
+
 DockPowerEn = 15
+PowerEn = 18
 
 try:
     from PIL import Image
@@ -28,8 +45,8 @@ import pytesseract
 
 videodev = '/dev/video0'
 ROI = (0, 0, 1280, 720)
-ROI = (396, 321, 970, 400)
-ROI_b = (374, 311, 980, 405)
+ROI = (415, 190, 955, 295)
+#ROI_b = (374, 311, 980, 405)
 
 
 pinlist = []
@@ -41,7 +58,28 @@ def gpio_init(turnOffPower) :
     GPIO.setmode(GPIO.BCM)
     GPIO.setup(3, GPIO.OUT)
     GPIO.setup(4, GPIO.OUT)
+    GPIO.setup(5, GPIO.OUT)
+    GPIO.setup(7, GPIO.OUT)
+    GPIO.setup(8, GPIO.OUT)
+    GPIO.setup(9, GPIO.OUT)
+    GPIO.setup(10, GPIO.OUT)
+    GPIO.setup(11, GPIO.OUT)
+    GPIO.setup(12, GPIO.OUT)
+    GPIO.setup(13, GPIO.OUT)
     GPIO.setup(14, GPIO.OUT)
+    GPIO.setup(16, GPIO.OUT)
+    GPIO.output(3, GPIO.LOW)
+    GPIO.output(4, GPIO.LOW)
+    GPIO.output(5, GPIO.LOW)
+    GPIO.output(7, GPIO.LOW)
+    GPIO.output(8, GPIO.LOW)
+    GPIO.output(9, GPIO.LOW)
+    GPIO.output(10, GPIO.LOW)
+    GPIO.output(11, GPIO.LOW)
+    GPIO.output(12, GPIO.LOW)
+    GPIO.output(13, GPIO.LOW)
+    GPIO.output(14, GPIO.LOW)
+    GPIO.output(16, GPIO.LOW)
     GPIO.setup(PowerEn, GPIO.OUT)
     GPIO.setup(DockPowerEn, GPIO.OUT)
     if (turnOffPower):
@@ -69,22 +107,24 @@ def set_dock_power_state(power_on):
         GPIO.output(DockPowerEn, GPIO.LOW)
 
 def press_button(button):
-    #print("Press button: ", button)
+    print("Press button: ", button)
     GPIO.output(int(button), GPIO.HIGH)
     time.sleep(0.2)
     GPIO.output(int(button), GPIO.LOW)
 
 def take_image_and_ocr(savename, do_ocr, ROI_):
+    camera_init()
     camera = Camera(videodev, 1280, 720)
     #global camera
     frame = camera.get_frame()
     image = Image.frombytes('RGB', (camera.width, camera.height), frame, 'raw', 'RGB')
+    image = image.rotate(-91.6)
     del frame
     camera.close()
     image = image.crop(ROI_)
     image.save(str(savename) + ".png")
     if (do_ocr):
-        tessconf = r'--dpi 300'
+        tessconf = r'--dpi 400'
         ret = pytesseract.image_to_string(image, lang='deu', config=tessconf).lower().translate(str.maketrans('', '', ' \n\t\r'))
         del image
         print(ret)
@@ -92,7 +132,7 @@ def take_image_and_ocr(savename, do_ocr, ROI_):
     del image
     return ''
 
-def enter_number(num):
+def enter_number_bosch(num):
     print("Entering pin: ", num)
     digits = []
     digits.append(num // 1000)
@@ -106,6 +146,39 @@ def enter_number(num):
             press_button(Button.Increase)
             time.sleep(0.1)
         press_button(Button.NextDigit) # jump to next digit
+        time.sleep(0.1)
+    press_button(Button.Fertig)
+
+def enter_number_husqvarna(num):
+    print("Entering pin: ", num)
+    digits = []
+    digits.append(num // 1000)
+    digits.append((num % 1000) // 100)
+    digits.append((num % 100) // 10)
+    digits.append((num % 10))
+
+    for digit in digits:
+        if (digit == 0) :
+            press_button(Button.Increase)
+        elif (digit == 1) :
+            press_button(Button.NextDigit)
+        elif (digit == 2):
+            press_button(Button.Btn_2)
+        elif (digit == 3):
+            press_button(Button.Btn_3)
+        elif (digit == 4):
+            press_button(Button.Btn_4)
+        elif (digit == 5):
+            press_button(Button.Btn_5)
+        elif (digit == 6):
+            press_button(Button.Btn_6)
+        elif (digit == 7):
+            press_button(Button.Btn_7)
+        elif (digit == 8):
+            press_button(Button.Btn_8)
+        elif (digit == 9):
+            press_button(Button.Btn_9)
+
         time.sleep(0.1)
     press_button(Button.Fertig)
 
@@ -138,50 +211,44 @@ def camera_init():
     os.system("v4l2-ctl -d 0 -c exposure_auto=0")
     os.system("v4l2-ctl -d 0 -c exposure_auto=1")
     os.system("v4l2-ctl -d 0 -c focus_auto=0")
-    os.system("v4l2-ctl -d 0 -c focus_absolute=18")
+    os.system("v4l2-ctl -d 0 -c focus_absolute=14")
 
 def do_bruteforce() :
     global camera
+    global target
     camera_init()
-    #camera = Camera(videodev, 1280, 720)
     pin_index = 0
     while pin_index < len(pinlist):
         set_dock_power_state(True)
-        time.sleep(5) # delay between the dock and power
-        set_power_state(True)
-        time.sleep(30) # boot time at the beginning
-        press_button(Button.Fertig) # Fertig
-        time.sleep(2)
+        time.sleep(8) # delay between the dock and power
         pin_found = False
-        for retry in range(3):
-            enter_number(pinlist[pin_index])
-            time.sleep(2)
-            ocr = take_image_and_ocr(pinlist[pin_index], True, ROI_b if retry == 2 else ROI)
-            if not 'hler' in ocr \
-                    and not 'ast' in ocr \
-                    and not 'ind' in ocr \
-                    and not 'esp' in ocr \
-                    and not 'tte' in ocr \
-                    and not 'onta' in ocr \
-                    and not 'feh' in ocr \
-                    and not 'erv' in ocr \
-                    and not 'serv' in ocr:
-                pin_found = True
-                try:
-                    input("Press enter to continue")
-                except SyntaxError:
-                    pass
-                break
-            pin_index = pin_index + 1
-            press_button(Button.Fertig)
-            time.sleep(1)
+        if (target == Target.Bosch_Indego) :
+            enter_number_bosch(pinlist[pin_index])
+        elif (target == Target.Husqvarna) :
+            enter_number_husqvarna(pinlist[pin_index])
+        time.sleep(1)
+
+        ocr = take_image_and_ocr(pinlist[pin_index], False, ROI)
+        '''if not 'akc' in ocr \
+                and not 'ept' in ocr \
+                and not 'nic' in ocr \
+                and not 'iert' in ocr \
+                and not 'akz' in ocr \
+                and not 'kze' in ocr \
+                and not 'icht' in ocr:
+            pin_found = False
+            try:
+                input("Press enter to continue")
+            except SyntaxError:
+                pass
+            break'''
+        pin_index = pin_index + 1
+
         if pin_found:
             print("Pin found?", pin_index, )
             break
-        set_power_state(False)
-        time.sleep(3)
         set_dock_power_state(False)
-        time.sleep(5)
+        time.sleep(1)
 
 def button_test():
     global power
@@ -200,6 +267,15 @@ def button_test():
             press_button(Button.Increase)
         elif c == 'n':
             press_button(Button.NextDigit)
+        elif (ord('0') <= ord(c) and ord(c) <= ord('9')) :
+            if (c == '9') :
+                press_button(Button.Btn_9)
+            elif (c == '0') :
+                press_button(Button.Btn_0)
+            elif (c == '1') :
+                press_button(Button.Btn_1)
+            else :
+                press_button(Button.Btn_2 + ord(c) - ord('2'))
         time.sleep(0.05)
 
 if __name__ == '__main__':
@@ -233,9 +309,10 @@ if __name__ == '__main__':
             print(" button_test: test the GPIO interface")
             print("              Supported keys:")
             print("              - q: exit")
-            print("              - f: 'Fertig'")
+            print("              - f: 'Fertig' / Enter at Husqvarna")
             print("              - +: increase digit")
             print("              - n: next digit")
+            print("              - 0-9: enter digit (Husqvarna only)")
             print("              - p: toggle power")
             print("              - d: toggle dock power")
             print(" take_image:  Take a test image and write it to test.png")

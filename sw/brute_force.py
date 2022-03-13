@@ -206,6 +206,8 @@ def dictionary_init(startPIN) :
                     if (not skipStartPIN) :
                         pinlist.append(int(row[0]))
         print("Loaded %d PINS" % len(pinlist))
+        if (len(pinlist) <= 1) :
+            input("All entries tried.... Press enter to continue")
 
 def camera_init():
     os.system("v4l2-ctl -d 0 -c exposure_auto=0")

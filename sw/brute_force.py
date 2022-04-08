@@ -46,7 +46,7 @@ import pytesseract
 
 videodev = '/dev/video0'
 ROI = (0, 0, 1280, 720)
-ROI = (280, 170, 760, 370)
+ROI = (280, 170, 1000, 450)
 #ROI_b = (374, 311, 980, 405)
 
 

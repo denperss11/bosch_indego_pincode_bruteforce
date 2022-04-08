@@ -11,16 +11,17 @@ import RPi.GPIO as GPIO
 import os
 import glob
 
+
 class Target(IntEnum):
     Bosch_Indego = 0,
     Husqvarna = 1
 
-target = Target.Husqvarna # TODO add cmd line arg
+target = Target.Bosch_Indego # TODO add cmd line arg
 
 from enum import Enum
 class Button(IntEnum):
-    NextDigit = 3
-    Increase = 4
+    NextDigit = 4
+    Increase = 3
     Fertig = 14
     Btn_0 = Increase
     Btn_1 = NextDigit
@@ -45,7 +46,7 @@ import pytesseract
 
 videodev = '/dev/video0'
 ROI = (0, 0, 1280, 720)
-ROI = (415, 190, 955, 295)
+ROI = (280, 170, 760, 370)
 #ROI_b = (374, 311, 980, 405)
 
 
@@ -115,10 +116,10 @@ def press_button(button):
 def take_image_and_ocr(savename, do_ocr, ROI_):
     camera_init()
     camera = Camera(videodev, 1280, 720)
+    time.sleep(2)
     #global camera
     frame = camera.get_frame()
     image = Image.frombytes('RGB', (camera.width, camera.height), frame, 'raw', 'RGB')
-    image = image.rotate(-91.6)
     del frame
     camera.close()
     image = image.crop(ROI_)
@@ -133,6 +134,8 @@ def take_image_and_ocr(savename, do_ocr, ROI_):
     return ''
 
 def enter_number_bosch(num):
+    press_button(Button.Fertig)
+    time.sleep(1)
     print("Entering pin: ", num)
     digits = []
     digits.append(num // 1000)
@@ -213,9 +216,9 @@ def camera_init():
     os.system("v4l2-ctl -d 0 -c exposure_auto=0")
     os.system("v4l2-ctl -d 0 -c exposure_auto=1")
     os.system("v4l2-ctl -d 0 -c focus_auto=0")
-    os.system("v4l2-ctl -d 0 -c focus_absolute=14")
+    os.system("v4l2-ctl -d 0 -c focus_absolute=18")
 
-def do_bruteforce() :
+def do_bruteforce_husq() :
     global camera
     global target
     camera_init()
@@ -251,6 +254,36 @@ def do_bruteforce() :
             break
         set_dock_power_state(False)
         time.sleep(1)
+
+def do_bruteforce():
+    global camera
+    global target
+    camera_init()
+    pin_index = 0
+    rebootCounter = 0
+    set_dock_power_state(True)
+    time.sleep(1)
+    set_power_state(True)
+    time.sleep(1)
+    set_power_state(False)
+    time.sleep(18)
+
+
+    while pin_index < len(pinlist):
+        enter_number_bosch(pinlist[pin_index])
+        ocr = take_image_and_ocr(pinlist[pin_index], False, ROI)
+        pin_index = pin_index + 1
+        rebootCounter = rebootCounter + 1
+        if (rebootCounter == 3) :
+            rebootCounter = 0
+            set_dock_power_state(False)
+            time.sleep(2)
+            set_dock_power_state(True)
+            time.sleep(1)
+            set_power_state(True)
+            time.sleep(1)
+            set_power_state(False)
+            time.sleep(18)
 
 def button_test():
     global power
@@ -295,15 +328,9 @@ if __name__ == '__main__':
         elif (sys.argv[1] == 'take_image'):
             camera_init()
             take_image_and_ocr("test", False, ROI)
-        elif (sys.argv[1] == 'take_image_b'):
-            camera_init()
-            take_image_and_ocr("test", False, ROI_b)
         elif (sys.argv[1] == 'take_image_ocr'):
             camera_init()
             take_image_and_ocr("test", True, ROI)
-        elif (sys.argv[1] == 'take_image_ocr_b'):
-            camera_init()
-            take_image_and_ocr("test", True, ROI_b)
         else:
             print("Usage:")
             print(" No arguments: start brute force")

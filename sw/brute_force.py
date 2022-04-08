@@ -266,7 +266,7 @@ def do_bruteforce():
     set_power_state(True)
     time.sleep(1)
     set_power_state(False)
-    time.sleep(18)
+    time.sleep(15)
 
 
     while pin_index < len(pinlist):
@@ -283,7 +283,7 @@ def do_bruteforce():
             set_power_state(True)
             time.sleep(1)
             set_power_state(False)
-            time.sleep(18)
+            time.sleep(15)
 
 def button_test():
     global power
